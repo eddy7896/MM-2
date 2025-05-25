@@ -68,15 +68,9 @@ COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create a script to start both services
-RUN echo '#!/bin/sh\n\
-# Start nginx in the background\n\
-nginx -g "daemon off;" &\n\
-# Start the backend server\n\
-cd /app/backend && node server.js\n\
-# Keep the container running\n\
-tail -f /dev/null\n' > /start.sh && \
-chmod +x /start.sh
+# Copy the start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Expose ports
 EXPOSE 80 5000
