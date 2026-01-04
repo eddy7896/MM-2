@@ -37,6 +37,11 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     # Security
     read_only: true
     tmpfs:
@@ -59,12 +64,7 @@ services:
     # Networking
     networks:
       - moodmorph-network
-    # Restart policy
-    restart_policy:
-      condition: on-failure
-      delay: 5s
-      max_attempts: 3
-      window: 120s
+    # Restart policy is now in the deploy section
     # Volumes (uncomment and configure as needed)
     # volumes:
     #   - moodmorph-data:/app/backend/data
