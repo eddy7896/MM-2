@@ -44,7 +44,7 @@ function App() {
       await new Promise(res => setTimeout(res, 400)); // Simulate progress
       setProgress(30);
       setProgressText('Analyzing website...');
-      const res = await fetch('/analyze', {
+      const res = await fetch('http://72.61.243.152:5000/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: fullUrl })
@@ -101,7 +101,7 @@ function App() {
       await new Promise(res => setTimeout(res, 300)); // Simulate progress
       setProgress(40);
       setProgressText('Analyzing image...');
-      const res = await fetch('/upload-image', {
+      const res = await fetch('http://72.61.243.152:5000/upload-image', {
         method: 'POST',
         body: formData
       });
