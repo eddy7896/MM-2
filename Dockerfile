@@ -1,34 +1,79 @@
-# Multi-stage Dockerfile for MoodMorph (React frontend + Express backend)
+# Combined Dockerfile for MoodMorph (Frontend + Backend)
+# Using multi-stage builds to keep the final image size small
 
-# --- Backend Build ---
-FROM node:20-alpine AS backend-build
+# ========== Backend Build Stage ==========
+FROM node:18-alpine as backend-build
+
+# Install dependencies for Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Set Puppeteer environment variables
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Set working directory
 WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm install --production
-COPY backend/ ./
 
-# --- Frontend Build ---
-FROM node:20-alpine AS frontend-build
+# Copy package files first (for better caching)
+COPY backend/package*.json ./
+
+# Install backend dependencies
+RUN npm ci --only=production
+
+# Copy the rest of the backend files
+COPY backend/ .
+
+# ========== Frontend Build Stage ==========
+FROM node:18-alpine as frontend-build
+
 WORKDIR /app/frontend
+
+# Copy package files first (for better caching)
 COPY frontend/package*.json ./
-RUN npm install --production
-COPY frontend/ ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the frontend files
+COPY frontend/ .
+
+# Build the frontend
 RUN npm run build
 
-# --- Production Image ---
-FROM node:20-alpine
-WORKDIR /app
+# ========== Production Stage ==========
+FROM nginx:alpine
 
-# Copy backend
-COPY --from=backend-build /app/backend ./backend
-# Copy frontend build
-COPY --from=frontend-build /app/frontend/build ./frontend/build
+# Install Node.js for the backend
+RUN apk add --no-cache nodejs
 
-# Install serve for static frontend
-RUN npm install -g serve
+# Set working directory for backend
+WORKDIR /app/backend
+
+# Copy backend files from build stage
+COPY --from=backend-build /app/backend ./
+
+# Create directory for frontend build
+RUN mkdir -p /usr/share/nginx/html
+
+# Copy frontend build to nginx
+COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy the start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Expose ports
-EXPOSE 5000 3000
+EXPOSE 80 5000
 
-# Start both backend and frontend (static) using background processes
-CMD ["sh", "-c", "cd backend && npm start & serve -s ../frontend/build -l 3000 && wait"]
+# Start the application
+CMD ["/start.sh"]

@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  moodmorph:
+    build:
+      context: .
+      dockerfile: Dockerfile.combined
+      args:
+        - NODE_ENV=production
+    container_name: moodmorph
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      # Add any other environment variables needed for production here
+    ports:
+      - "80:80"
+      - "5000:5000"
+    # Using named volumes for better data persistence
+    volumes:
+      - moodmorph-data:/app/backend/data
+      # Mount config files if needed
+      # - ./config:/app/backend/config
+    networks:
+      - moodmorph-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 800M
+        reservations:
+          cpus: '0.5'
+          memory: 400M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Uncomment and configure if you need a separate database
+  # db:
+  #   image: postgres:13-alpine
+  #   container_name: moodmorph-db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: your_db_user
+  #     POSTGRES_PASSWORD: your_secure_password
+  #     POSTGRES_DB: moodmorph
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - moodmorph-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U your_db_user -d moodmorph"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1G
+  #       reservations:
+  #         memory: 512M
+
+networks:
+  moodmorph-network:
+    driver: bridge
+    # For production, you might want to use an overlay network if using Docker Swarm
+    # driver: overlay
+    # attachable: true
+
+volumes:
+  moodmorph-data:
+  # postgres-data:
+
+# Uncomment if you're using Docker Swarm
+# deploy:
+#   mode: replicated
+#   replicas: 1
+#   update_config:
+#     parallelism: 1
+#     delay: 10s
+#   restart_policy:
+#     condition: on-failure
+#     delay: 5s
+#     max_attempts: 3
+#     window: 120s
