@@ -107,17 +107,6 @@ networks:
     #   config:
     #     - subnet: 172.28.0.0/16
 
-volumes:
-  # Uncomment and configure volumes as needed
-  # moodmorph-data:
-  #   name: moodmorph-data
-  #   driver: local
-  #   driver_opts:
-  #     type: none
-  #     o: bind
-  #     device: /path/to/host/directory
-  # postgres-data:
-  #   name: postgres-data
 
 # Uncomment if using Docker Swarm
 # deploy:
