@@ -4,7 +4,7 @@ services:
   moodmorph:
     build:
       context: .
-      dockerfile: Dockerfile.combined
+      dockerfile: Dockerfile
       args:
         - NODE_ENV=production
     container_name: moodmorph
@@ -12,52 +12,79 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
-      # Add any other environment variables needed for production here
+      # Security-related environment variables
+      - NODE_OPTIONS=--max-old-space-size=512
+      - NPM_CONFIG_PRODUCTION=true
+      # Add application-specific environment variables here
+      # - DATABASE_URL=postgres://user:pass@db:5432/moodmorph
+      # - API_KEY=your-api-key
     ports:
       - "80:80"
       - "5000:5000"
-    # Using named volumes for better data persistence
-    volumes:
-      - moodmorph-data:/app/backend/data
-      # Mount config files if needed
-      # - ./config:/app/backend/config
-    networks:
-      - moodmorph-network
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Resource constraints
     deploy:
       resources:
         limits:
           cpus: '1'
-          memory: 800M
+          memory: 1G
         reservations:
           cpus: '0.5'
-          memory: 400M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+          memory: 512M
+    # Security
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    # Logging configuration
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+        compress: "true"
+    # Networking
+    networks:
+      - moodmorph-network
+    # Restart policy
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+    # Volumes (uncomment and configure as needed)
+    # volumes:
+    #   - moodmorph-data:/app/backend/data
+    #   - ./logs:/var/log/nginx
 
-  # Uncomment and configure if you need a separate database
+  # Example database service (uncomment and configure as needed)
   # db:
   #   image: postgres:13-alpine
   #   container_name: moodmorph-db
   #   restart: unless-stopped
   #   environment:
-  #     POSTGRES_USER: your_db_user
-  #     POSTGRES_PASSWORD: your_secure_password
-  #     POSTGRES_DB: moodmorph
+  #     POSTGRES_USER: ${DB_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+  #     POSTGRES_DB: ${DB_NAME:-moodmorph}
   #   volumes:
   #     - postgres-data:/var/lib/postgresql/data
   #   networks:
   #     - moodmorph-network
   #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U your_db_user -d moodmorph"]
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-moodmorph}"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 5
@@ -71,21 +98,36 @@ services:
 networks:
   moodmorph-network:
     driver: bridge
-    # For production, you might want to use an overlay network if using Docker Swarm
+    # For production with multiple nodes, consider using overlay network:
     # driver: overlay
     # attachable: true
+    # Enable IPAM for better network control if needed
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.28.0.0/16
 
 volumes:
-  moodmorph-data:
+  # Uncomment and configure volumes as needed
+  # moodmorph-data:
+  #   driver: local
+  #   driver_opts:
+  #     type: none
+  #     o: bind
+  #     device: /path/to/host/directory
   # postgres-data:
 
-# Uncomment if you're using Docker Swarm
+# Uncomment if using Docker Swarm
 # deploy:
 #   mode: replicated
-#   replicas: 1
+#   replicas: 2
 #   update_config:
 #     parallelism: 1
 #     delay: 10s
+#     order: start-first
+#   rollback_config:
+#     parallelism: 0
+#     order: stop-first
 #   restart_policy:
 #     condition: on-failure
 #     delay: 5s
