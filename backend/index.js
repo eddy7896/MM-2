@@ -84,4 +84,17 @@ app.post('/analyze', async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT, () => console.log(`Backend listening on port ${PORT}`));
+const HOST = '0.0.0.0';
+
+// Add a simple health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`Backend server running at http://${HOST}:${PORT}`);
+  console.log('Endpoints:');
+  console.log(`- POST http://${HOST}:${PORT}/analyze`);
+  console.log(`- POST http://${HOST}:${PORT}/upload-image`);
+  console.log(`- GET  http://${HOST}:${PORT}/health`);
+});
