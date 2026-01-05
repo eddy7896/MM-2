@@ -8,7 +8,11 @@ import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'http://72.61.243.152:3001',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Image upload and color palette extraction endpoint
